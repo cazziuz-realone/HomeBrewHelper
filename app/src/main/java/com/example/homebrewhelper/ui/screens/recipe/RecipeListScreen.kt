@@ -36,8 +36,10 @@ fun RecipeListScreen(
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val selectedBeverageType by viewModel.selectedBeverageType.collectAsStateWithLifecycle()
     val showFavoritesOnly by viewModel.showFavoritesOnly.collectAsStateWithLifecycle()
+    val ingredientStats by viewModel.ingredientStats.collectAsStateWithLifecycle()
     
     var showFilterSheet by remember { mutableStateOf(false) }
+    var showDebugInfo by remember { mutableStateOf(false) }
     
     // Handle navigation from ViewModel
     LaunchedEffect(uiState.navigationTarget) {
@@ -65,6 +67,28 @@ fun RecipeListScreen(
                     )
                 },
                 actions = {
+                    // Ingredient status icon (shows if ingredients are loaded)
+                    IconButton(
+                        onClick = { showDebugInfo = !showDebugInfo }
+                    ) {
+                        Icon(
+                            imageVector = if (uiState.hasIngredients) Icons.Default.Check else Icons.Default.Warning,
+                            contentDescription = "Ingredient status",
+                            tint = if (uiState.hasIngredients) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                        )
+                    }
+                    
+                    // Refresh ingredients button (for troubleshooting)
+                    IconButton(
+                        onClick = { viewModel.forceInitialization() },
+                        enabled = !uiState.isLoading
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Refresh ingredients"
+                        )
+                    }
+                    
                     // Favorites filter toggle
                     IconButton(
                         onClick = { viewModel.toggleFavoritesFilter() }
@@ -116,6 +140,18 @@ fun RecipeListScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
+            // Initialization status card
+            if (uiState.initializationMessage != null || !uiState.hasIngredients || showDebugInfo) {
+                InitializationStatusCard(
+                    uiState = uiState,
+                    ingredientStats = ingredientStats,
+                    onRefreshIngredients = { viewModel.forceInitialization() },
+                    onCheckStatus = { viewModel.checkIngredientStatus() },
+                    showDebugInfo = showDebugInfo,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
+            
             // Search bar (if search query is not empty)
             if (searchQuery.isNotBlank()) {
                 SearchBar(
@@ -150,16 +186,16 @@ fun RecipeListScreen(
             
             // Recipes list or empty state
             if (uiState.isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
+                LoadingState(
+                    message = uiState.initializationMessage ?: "Loading...",
+                    modifier = Modifier.fillMaxSize()
+                )
             } else if (recipes.isEmpty() && searchQuery.isBlank() && selectedBeverageType == null && !showFavoritesOnly) {
                 // Empty state for new users
                 EmptyRecipeState(
                     onCreateRecipe = onNavigateToNewRecipe,
+                    hasIngredients = uiState.hasIngredients,
+                    onRefreshIngredients = { viewModel.forceInitialization() },
                     modifier = Modifier.fillMaxSize()
                 )
             } else if (recipes.isEmpty()) {
@@ -243,6 +279,165 @@ fun RecipeListScreen(
         LaunchedEffect(error) {
             // TODO: Show error snackbar
             viewModel.clearError()
+        }
+    }
+}
+
+@Composable
+private fun InitializationStatusCard(
+    uiState: com.example.homebrewhelper.viewmodel.RecipeListUiState,
+    ingredientStats: com.example.homebrewhelper.data.repository.IngredientRepository.IngredientStats?,
+    onRefreshIngredients: () -> Unit,
+    onCheckStatus: () -> Unit,
+    showDebugInfo: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(
+            containerColor = when {
+                uiState.error != null -> MaterialTheme.colorScheme.errorContainer
+                uiState.initializationMessage != null -> MaterialTheme.colorScheme.secondaryContainer
+                uiState.hasIngredients -> MaterialTheme.colorScheme.primaryContainer
+                else -> MaterialTheme.colorScheme.errorContainer
+            }
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = when {
+                        uiState.error != null -> "Ingredient Loading Error"
+                        uiState.initializationMessage != null -> "Loading Ingredients"
+                        uiState.hasIngredients -> "Mead Brewing Database"
+                        else -> "No Ingredients Loaded"
+                    },
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                Row {
+                    IconButton(
+                        onClick = onCheckStatus,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "Check status",
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    
+                    IconButton(
+                        onClick = onRefreshIngredients,
+                        enabled = !uiState.isLoading,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Refresh ingredients",
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            when {
+                uiState.error != null -> {
+                    Text(
+                        text = uiState.error,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+                uiState.initializationMessage != null -> {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = uiState.initializationMessage,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+                uiState.hasIngredients -> {
+                    Text(
+                        text = "✓ ${uiState.ingredientCount} ingredients loaded for mead brewing",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+                else -> {
+                    Text(
+                        text = "No ingredients available. Tap refresh to load mead brewing ingredients.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+            }
+            
+            // Debug information
+            if (showDebugInfo && ingredientStats != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Divider()
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Text(
+                    text = "Debug Information",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                Text(
+                    text = buildString {
+                        appendLine("Total: ${ingredientStats.totalIngredients}")
+                        appendLine("Custom: ${ingredientStats.customIngredients}")
+                        appendLine("Grains: ${ingredientStats.grainCount}")
+                        appendLine("Hops: ${ingredientStats.hopCount}")
+                        appendLine("Yeast: ${ingredientStats.yeastCount}")
+                        append("Avg Cost: $${ingredientStats.averageCost?.let { "%.2f".format(it) } ?: "N/A"}")
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LoadingState(
+    message: String,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            CircularProgressIndicator()
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyLarge
+            )
         }
     }
 }
@@ -396,6 +591,8 @@ private fun StatItem(
 @Composable
 private fun EmptyRecipeState(
     onCreateRecipe: () -> Unit,
+    hasIngredients: Boolean,
+    onRefreshIngredients: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -421,24 +618,43 @@ private fun EmptyRecipeState(
         Spacer(modifier = Modifier.height(8.dp))
         
         Text(
-            text = "Start by creating your first recipe",
+            text = if (hasIngredients) {
+                "Start by creating your first mead recipe"
+            } else {
+                "First, let's load the mead brewing ingredients"
+            },
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         
         Spacer(modifier = Modifier.height(24.dp))
         
-        Button(
-            onClick = onCreateRecipe,
-            modifier = Modifier.size(width = 200.dp, height = 48.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Add,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Create Recipe")
+        if (hasIngredients) {
+            Button(
+                onClick = onCreateRecipe,
+                modifier = Modifier.size(width = 200.dp, height = 48.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Create Recipe")
+            }
+        } else {
+            Button(
+                onClick = onRefreshIngredients,
+                modifier = Modifier.size(width = 220.dp, height = 48.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Load Ingredients")
+            }
         }
     }
 }
