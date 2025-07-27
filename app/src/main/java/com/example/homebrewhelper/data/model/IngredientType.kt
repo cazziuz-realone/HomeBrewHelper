@@ -77,6 +77,14 @@ enum class IngredientType(
         alternateUnits = listOf("grams")
     ),
     
+    // Fruit for melomels and fruit wines
+    FRUIT(
+        displayName = "Fruit",
+        applicableBeverages = listOf(BeverageType.MEAD, BeverageType.WINE, BeverageType.CIDER),
+        defaultUnit = "pounds",
+        alternateUnits = listOf("kilograms", "ounces")
+    ),
+    
     // Cider-specific ingredients
     APPLE_JUICE(
         displayName = "Apple Juice/Cider",
@@ -87,7 +95,7 @@ enum class IngredientType(
     ),
     TANNINS(
         displayName = "Tannins",
-        applicableBeverages = listOf(BeverageType.CIDER, BeverageType.WINE),
+        applicableBeverages = listOf(BeverageType.CIDER, BeverageType.WINE, BeverageType.MEAD),
         defaultUnit = "teaspoons",
         alternateUnits = listOf("grams")
     ),
