@@ -21,21 +21,51 @@ class InitializationRepository @Inject constructor(
      */
     suspend fun initializeDefaultData(): Result<Unit> {
         return try {
+            android.util.Log.d("HomeBrewHelper", "Starting initialization process...")
+            
             if (hasInitialized) {
+                android.util.Log.d("HomeBrewHelper", "Already initialized, skipping")
                 return Result.success(Unit)
             }
             
             // Check if we already have ingredients
             val stats = ingredientRepository.getIngredientStats()
+            android.util.Log.d("HomeBrewHelper", "Current ingredient count: ${stats.totalIngredients}")
+            
             if (stats.totalIngredients == 0) {
+                android.util.Log.d("HomeBrewHelper", "No ingredients found, initializing mead database...")
+                
                 // Initialize with mead-focused ingredients
                 val defaultIngredients = createMeadFocusedIngredients()
-                ingredientRepository.importIngredients(defaultIngredients, false)
-                    .getOrThrow()
+                android.util.Log.d("HomeBrewHelper", "Created ${defaultIngredients.size} mead ingredients")
                 
-                android.util.Log.d("HomeBrewHelper", "Initialized ${defaultIngredients.size} ingredients")
+                // Import the ingredients
+                val importResult = ingredientRepository.importIngredients(defaultIngredients, false)
+                importResult
+                    .onSuccess {
+                        android.util.Log.d("HomeBrewHelper", "Successfully imported ${defaultIngredients.size} mead ingredients")
+                        hasInitialized = true
+                    }
+                    .onFailure { error ->
+                        android.util.Log.e("HomeBrewHelper", "Failed to import ingredients", error)
+                        return Result.failure(error)
+                    }
+                
+                // Verify the import worked
+                val newStats = ingredientRepository.getIngredientStats()
+                android.util.Log.d("HomeBrewHelper", "After import - ingredient count: ${newStats.totalIngredients}")
+                
+                if (newStats.totalIngredients == 0) {
+                    val error = Exception("Ingredient import failed - no ingredients found after import")
+                    android.util.Log.e("HomeBrewHelper", "Import verification failed", error)
+                    return Result.failure(error)
+                }
+            } else {
+                android.util.Log.d("HomeBrewHelper", "Ingredients already exist (${stats.totalIngredients}), skipping initialization")
+                hasInitialized = true
             }
-            hasInitialized = true
+            
+            android.util.Log.d("HomeBrewHelper", "Initialization completed successfully")
             Result.success(Unit)
         } catch (e: Exception) {
             android.util.Log.e("HomeBrewHelper", "Failed to initialize ingredients", e)
@@ -48,19 +78,39 @@ class InitializationRepository @Inject constructor(
      */
     suspend fun forceInitialization(): Result<Unit> {
         return try {
-            val ingredients = createMeadFocusedIngredients()
-            ingredientRepository.importIngredients(ingredients, true)
-                .getOrThrow()
+            android.util.Log.d("HomeBrewHelper", "Force initializing mead ingredient database...")
             
-            android.util.Log.d("HomeBrewHelper", "Force initialized ${ingredients.size} ingredients")
-            Result.success(Unit)
+            val ingredients = createMeadFocusedIngredients()
+            android.util.Log.d("HomeBrewHelper", "Force importing ${ingredients.size} mead ingredients")
+            
+            val result = ingredientRepository.importIngredients(ingredients, true)
+            result
+                .onSuccess {
+                    android.util.Log.d("HomeBrewHelper", "Force initialization successful")
+                    hasInitialized = true
+                }
+                .onFailure { error ->
+                    android.util.Log.e("HomeBrewHelper", "Force initialization failed", error)
+                }
+            
+            result
         } catch (e: Exception) {
             android.util.Log.e("HomeBrewHelper", "Failed to force initialize ingredients", e)
             Result.failure(e)
         }
     }
     
+    /**
+     * Reset initialization status - for testing
+     */
+    fun resetInitializationStatus() {
+        hasInitialized = false
+        android.util.Log.d("HomeBrewHelper", "Reset initialization status")
+    }
+    
     private fun createMeadFocusedIngredients(): List<Ingredient> {
+        android.util.Log.d("HomeBrewHelper", "Creating comprehensive mead ingredient database...")
+        
         return listOf(
             // ===== HONEY VARIETIES (Primary Mead Ingredient) =====
             Ingredient(
@@ -586,7 +636,48 @@ class InitializationRepository @Inject constructor(
                 usageNotes = "Very potent - use sparingly",
                 isCommonlyAvailable = true,
                 averageCostPerUnit = 4.0
+            ),
+            
+            // ===== FRUIT ADDITIONS (For Melomels) =====
+            Ingredient(
+                name = "Blackberries (Fresh)",
+                type = IngredientType.FRUIT,
+                description = "Fresh blackberries for melomel production. Deep color and tart-sweet flavor.",
+                category = "Berries",
+                subcategory = "Fresh Fruit",
+                defaultUnit = "pounds",
+                alternateUnits = "kilograms,ounces",
+                typicalUsageMin = 2.0,
+                typicalUsageMax = 4.0,
+                applicableBeverages = "MEAD,WINE",
+                preferredBeverages = "MEAD",
+                flavorProfile = "Tart, sweet, deep berry",
+                intensity = 4,
+                contributes = "Fruit flavor, color, some fermentable sugars",
+                isCommonlyAvailable = true,
+                averageCostPerUnit = 6.0
+            ),
+            
+            Ingredient(
+                name = "Elderberries (Dried)",
+                type = IngredientType.FRUIT,
+                description = "Dried elderberries for dark, complex melomel. Earthy and wine-like.",
+                category = "Berries",
+                subcategory = "Dried Fruit",
+                defaultUnit = "ounces",
+                alternateUnits = "grams,pounds",
+                typicalUsageMin = 4.0,
+                typicalUsageMax = 8.0,
+                applicableBeverages = "MEAD,WINE",
+                preferredBeverages = "MEAD",
+                flavorProfile = "Earthy, wine-like, complex",
+                intensity = 5,
+                contributes = "Deep color, complex fruit character, tannins",
+                isCommonlyAvailable = false,
+                averageCostPerUnit = 8.0
             )
-        )
+        ).also {
+            android.util.Log.d("HomeBrewHelper", "Created ${it.size} mead-focused ingredients")
+        }
     }
 }
