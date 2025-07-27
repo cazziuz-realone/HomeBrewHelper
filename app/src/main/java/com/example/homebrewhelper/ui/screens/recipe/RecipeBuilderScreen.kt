@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.homebrewhelper.data.model.BeverageType
+import com.example.homebrewhelper.data.model.IngredientType
 import com.example.homebrewhelper.ui.components.BeverageTypeGrid
 import com.example.homebrewhelper.viewmodel.RecipeBuilderViewModel
 import com.example.homebrewhelper.viewmodel.RecipeFormState
@@ -38,6 +39,7 @@ fun RecipeBuilderScreen(
     val recipeIngredients by viewModel.recipeIngredients.collectAsStateWithLifecycle()
     
     val isEditing = recipeId != null
+    var showIngredientPicker by remember { mutableStateOf(false) }
     
     // Handle recipe saved
     LaunchedEffect(uiState.isSaved, uiState.savedRecipeId) {
@@ -118,7 +120,7 @@ fun RecipeBuilderScreen(
                 RecipeIngredientsSection(
                     ingredients = recipeIngredients,
                     beverageType = recipeForm.beverageType,
-                    onAddIngredient = { /* TODO: Implement ingredient picker */ },
+                    onAddIngredient = { showIngredientPicker = true },
                     onUpdateIngredient = viewModel::updateIngredient,
                     onRemoveIngredient = viewModel::removeIngredient,
                     formErrors = uiState.formErrors
@@ -143,6 +145,18 @@ fun RecipeBuilderScreen(
                 )
             }
         }
+    }
+    
+    // Ingredient Picker Modal
+    if (showIngredientPicker) {
+        IngredientPickerDialog(
+            beverageType = recipeForm.beverageType,
+            onIngredientSelected = { ingredientId, quantity, unit, step, additionTime ->
+                viewModel.addIngredient(ingredientId, quantity, unit, step, additionTime)
+                showIngredientPicker = false
+            },
+            onDismiss = { showIngredientPicker = false }
+        )
     }
     
     // Beverage type change warning
@@ -368,7 +382,7 @@ private fun RecipeIngredientsSection(
                     fontWeight = FontWeight.Bold
                 )
                 
-                OutlinedButton(
+                Button(
                     onClick = onAddIngredient
                 ) {
                     Icon(
@@ -377,7 +391,7 @@ private fun RecipeIngredientsSection(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Add")
+                    Text("Add Ingredient")
                 }
             }
             
@@ -390,12 +404,37 @@ private fun RecipeIngredientsSection(
             }
             
             if (ingredients.isEmpty()) {
-                Text(
-                    text = "No ingredients added yet. Add ingredients to complete your recipe.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(vertical = 16.dp)
-                )
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.LocalBar,
+                            contentDescription = null,
+                            modifier = Modifier.size(48.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "No ingredients added yet",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = "Add ${beverageType.displayName.lowercase()} ingredients to complete your recipe",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             } else {
                 ingredients.forEachIndexed { index, ingredient ->
                     IngredientFormItem(
@@ -435,7 +474,11 @@ private fun IngredientFormItem(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Ingredient ${if (ingredient.ingredientId.isNotBlank()) "- ${ingredient.ingredientId}" else ""}",
+                    text = if (ingredient.ingredientId.isNotBlank()) {
+                        "Ingredient: ${ingredient.ingredientId}"
+                    } else {
+                        "New Ingredient"
+                    },
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Medium
                 )
@@ -452,12 +495,29 @@ private fun IngredientFormItem(
                 }
             }
             
-            // TODO: Implement ingredient picker
-            Text(
-                text = "Ingredient picker not yet implemented",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            if (ingredient.ingredientId.isNotBlank()) {
+                Text(
+                    text = "${ingredient.quantity} ${ingredient.unit}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                
+                if (ingredient.step.isNotBlank()) {
+                    Text(
+                        text = "Step: ${ingredient.step}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                
+                if (ingredient.additionTime > 0) {
+                    Text(
+                        text = "Added at: ${ingredient.additionTime} minutes",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
     }
 }
