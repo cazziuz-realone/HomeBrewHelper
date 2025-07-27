@@ -14,50 +14,71 @@ enum class BeverageType(
     val icon: ImageVector,
     val description: String,
     val primaryIngredients: List<String>,
-    val typicalAbv: DoubleRange
+    val typicalAbvMin: Double,
+    val typicalAbvMax: Double
 ) {
     BEER(
         displayName = "Beer",
         icon = Icons.Default.LocalBar,
         description = "Fermented beverage made from malted cereal grains",
         primaryIngredients = listOf("Malt", "Hops", "Yeast", "Water"),
-        typicalAbv = 3.0..12.0
+        typicalAbvMin = 3.0,
+        typicalAbvMax = 12.0
     ),
     WINE(
         displayName = "Wine",
         icon = Icons.Default.WineBar,
         description = "Fermented beverage made from grapes or other fruits",
         primaryIngredients = listOf("Grapes", "Yeast", "Acid", "Sulfites"),
-        typicalAbv = 8.0..16.0
+        typicalAbvMin = 8.0,
+        typicalAbvMax = 16.0
     ),
     MEAD(
         displayName = "Mead",
         icon = Icons.Default.LocalBar,
         description = "Fermented beverage made from honey and water",
         primaryIngredients = listOf("Honey", "Water", "Yeast", "Nutrients"),
-        typicalAbv = 8.0..18.0
+        typicalAbvMin = 8.0,
+        typicalAbvMax = 18.0
     ),
     CIDER(
         displayName = "Cider",
         icon = Icons.Default.LocalBar,
         description = "Fermented beverage made from apple juice",
         primaryIngredients = listOf("Apple Juice", "Yeast", "Acid", "Tannins"),
-        typicalAbv = 4.0..12.0
+        typicalAbvMin = 4.0,
+        typicalAbvMax = 12.0
     ),
     KOMBUCHA(
         displayName = "Kombucha",
         icon = Icons.Default.LocalBar,
         description = "Fermented tea beverage with SCOBY culture",
         primaryIngredients = listOf("Tea", "Sugar", "SCOBY", "Starter Tea"),
-        typicalAbv = 0.0..3.0
+        typicalAbvMin = 0.0,
+        typicalAbvMax = 3.0
     ),
     SPECIALTY(
         displayName = "Specialty",
         icon = Icons.Default.LocalBar,
         description = "Other fermented beverages and experimental brews",
         primaryIngredients = listOf("Various"),
-        typicalAbv = 0.0..20.0
+        typicalAbvMin = 0.0,
+        typicalAbvMax = 20.0
     );
+
+    /**
+     * Get typical ABV range as a formatted string
+     */
+    fun getAbvRangeString(): String {
+        return "${typicalAbvMin}% - ${typicalAbvMax}%"
+    }
+
+    /**
+     * Check if ABV is within typical range for this beverage type
+     */
+    fun isAbvInRange(abv: Double): Boolean {
+        return abv >= typicalAbvMin && abv <= typicalAbvMax
+    }
 
     companion object {
         /**
@@ -78,7 +99,7 @@ enum class BeverageType(
          * Get all alcoholic beverage types
          */
         fun getAlcoholic(): List<BeverageType> {
-            return values().filter { it.typicalAbv.start > 0.5 }
+            return values().filter { it.typicalAbvMin > 0.5 }
         }
     }
 }
