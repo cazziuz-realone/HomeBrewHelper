@@ -20,8 +20,7 @@ import com.example.homebrewhelper.data.database.entity.RecipeIngredient
         RecipeIngredient::class
     ],
     version = 1,
-    exportSchema = true,
-    autoMigrations = []
+    exportSchema = false
 )
 @TypeConverters(Converters::class)
 abstract class HomeBrewDatabase : RoomDatabase() {
@@ -34,17 +33,5 @@ abstract class HomeBrewDatabase : RoomDatabase() {
     companion object {
         const val DATABASE_NAME = "homebrew_database"
         const val DATABASE_VERSION = 1
-        
-        /**
-         * Pre-populate callback to insert default ingredients
-         */
-        fun createCallback(): Callback {
-            return object : Callback() {
-                override fun onCreate(db: SupportSQLiteDatabase) {
-                    super.onCreate(db)
-                    // Database will be populated via repository on first launch
-                }
-            }
-        }
     }
 }
