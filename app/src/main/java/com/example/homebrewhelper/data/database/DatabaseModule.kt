@@ -26,7 +26,6 @@ object DatabaseModule {
             HomeBrewDatabase::class.java,
             HomeBrewDatabase.DATABASE_NAME
         )
-        .addCallback(HomeBrewDatabase.createCallback())
         .fallbackToDestructiveMigration() // For development only
         .build()
     }
