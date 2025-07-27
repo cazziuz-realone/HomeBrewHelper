@@ -231,13 +231,14 @@ class IngredientRepository @Inject constructor(
         }
     }
     
-    // Default ingredients initialization
+    // Default ingredients initialization - FIXED METHOD CALL
     suspend fun initializeDefaultIngredients(): Result<Unit> {
         return try {
             val existingCount = ingredientDao.getTotalIngredientCount()
             if (existingCount == 0) {
                 val defaultIngredients = createDefaultIngredients()
-                ingredientDao.insertIngredients(defaultIngredients)
+                // Fixed: Use the correct method name from updated DAO
+                ingredientDao.insertIngredientsIgnoreConflicts(defaultIngredients)
             }
             Result.success(Unit)
         } catch (e: Exception) {
