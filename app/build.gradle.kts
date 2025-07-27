@@ -5,6 +5,7 @@ plugins {
     id("kotlin-kapt")
     id("dagger.hilt.android.plugin")
     id("kotlin-parcelize")
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 android {
@@ -79,9 +80,6 @@ dependencies {
     implementation("com.google.dagger:hilt-android:2.52")
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
     kapt("com.google.dagger:hilt-compiler:2.52")
-    
-    // JSON Serialization
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     
     // Date and Time
     implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.1")
