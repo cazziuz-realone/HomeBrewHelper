@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.homebrewhelper.data.database.entity.Recipe
 import com.example.homebrewhelper.data.model.BeverageType
 import com.example.homebrewhelper.data.repository.RecipeRepository
+import com.example.homebrewhelper.data.repository.InitializationRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -16,7 +17,8 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class RecipeListViewModel @Inject constructor(
-    private val recipeRepository: RecipeRepository
+    private val recipeRepository: RecipeRepository,
+    private val initializationRepository: InitializationRepository
 ) : ViewModel() {
     
     // UI State
@@ -73,7 +75,55 @@ class RecipeListViewModel @Inject constructor(
         )
     
     init {
+        // Initialize default data on first startup
+        initializeApp()
         loadRecipeStats()
+    }
+    
+    private fun initializeApp() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            
+            initializationRepository.initializeDefaultData()
+                .onSuccess {
+                    android.util.Log.d("HomeBrewHelper", "Successfully initialized app data")
+                    _uiState.update { it.copy(isLoading = false) }
+                }
+                .onFailure { error ->
+                    android.util.Log.e("HomeBrewHelper", "Failed to initialize app data", error)
+                    _uiState.update { 
+                        it.copy(
+                            isLoading = false,
+                            error = "Failed to initialize app data. Try restarting the app."
+                        ) 
+                    }
+                }
+        }
+    }
+    
+    // Manual refresh function for testing
+    fun forceInitialization() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            
+            initializationRepository.forceInitialization()
+                .onSuccess {
+                    _uiState.update { 
+                        it.copy(
+                            isLoading = false,
+                            successMessage = "Ingredients database refreshed successfully!"
+                        ) 
+                    }
+                }
+                .onFailure { error ->
+                    _uiState.update { 
+                        it.copy(
+                            isLoading = false,
+                            error = "Failed to refresh ingredients: ${error.message}"
+                        ) 
+                    }
+                }
+        }
     }
     
     // Actions
