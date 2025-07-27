@@ -17,8 +17,11 @@ interface IngredientDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertIngredient(ingredient: Ingredient): Long
     
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertIngredientsIgnoreConflicts(ingredients: List<Ingredient>)
+    
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertIngredients(ingredients: List<Ingredient>)
+    suspend fun insertIngredientsReplaceConflicts(ingredients: List<Ingredient>)
     
     // Read operations - Basic
     @Query("SELECT * FROM ingredients WHERE id = :ingredientId AND isDeleted = 0")
@@ -208,17 +211,18 @@ interface IngredientDao {
     
     @Transaction
     suspend fun importIngredients(ingredients: List<Ingredient>, replaceExisting: Boolean = false) {
+        android.util.Log.d("HomeBrewHelper", "Importing ${ingredients.size} ingredients (replaceExisting: $replaceExisting)")
+        
         if (replaceExisting) {
-            ingredients.forEach { ingredient ->
-                val existing = getIngredientById(ingredient.id)
-                if (existing != null) {
-                    updateIngredient(ingredient)
-                } else {
-                    insertIngredient(ingredient)
-                }
-            }
+            // Replace all existing ingredients
+            android.util.Log.d("HomeBrewHelper", "Using REPLACE strategy for import")
+            insertIngredientsReplaceConflicts(ingredients)
         } else {
-            insertIngredients(ingredients)
+            // Only insert ingredients that don't already exist (based on ID)
+            android.util.Log.d("HomeBrewHelper", "Using IGNORE strategy for import")
+            insertIngredientsIgnoreConflicts(ingredients)
         }
+        
+        android.util.Log.d("HomeBrewHelper", "Import completed successfully")
     }
 }
