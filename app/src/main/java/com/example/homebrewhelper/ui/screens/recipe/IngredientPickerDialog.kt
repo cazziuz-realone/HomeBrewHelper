@@ -3,6 +3,7 @@ package com.example.homebrewhelper.ui.screens.recipe
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -98,7 +99,7 @@ fun IngredientPickerDialog(
                     }
                 }
                 
-                Divider()
+                HorizontalDivider()
                 
                 // Content
                 if (selectedIngredient == null) {
@@ -201,9 +202,10 @@ private fun IngredientSelectionContent(
                 style = MaterialTheme.typography.labelMedium
             )
             
-            LazyColumn(
+            LazyRow(
                 modifier = Modifier.height(80.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(horizontal = 4.dp)
             ) {
                 val applicableTypes = IngredientType.getForBeverage(beverageType)
                 items(applicableTypes) { type ->
@@ -220,7 +222,7 @@ private fun IngredientSelectionContent(
             }
         }
         
-        Divider()
+        HorizontalDivider()
         
         // Ingredients list
         when {
@@ -512,9 +514,10 @@ private fun IngredientDetailsContent(
                                 text = "Common units:",
                                 style = MaterialTheme.typography.labelMedium
                             )
-                            LazyColumn(
+                            LazyRow(
                                 modifier = Modifier.height(60.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                contentPadding = PaddingValues(horizontal = 4.dp)
                             ) {
                                 items(commonUnits.filter { it.isNotBlank() }) { commonUnit ->
                                     FilterChip(
